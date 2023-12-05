@@ -4,6 +4,7 @@ from PyQt5.QtGui import QPainter, QPen, QFont
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QMessageBox, QPushButton
+# import fluidsynth
 
 class Fretboard(QWidget):
     def __init__(self, parent=None):
@@ -23,15 +24,28 @@ class Fretboard(QWidget):
         self.drawStrings(painter)
         self.drawFretNumbers(painter)
 
+    # def drawFrets(self, painter):
+    #     for i in range(1, self.fret_count + 1):  # 从1开始，因为不再绘制最左侧的竖线
+    #         x = i * self.fret_spacing
+    #         if i == 1:  # 紧邻数字1的左侧竖线不透明
+    #             pen = QPen(Qt.black, 2)
+    #         else:  # 其他竖线带透明度
+    #             pen = QPen(QColor(0, 0, 0, 120), 2)
+    #         painter.setPen(pen)
+    #         painter.drawLine(x, self.string_spacing, x, self.height() - self.string_spacing)
+    
     def drawFrets(self, painter):
-        for i in range(1, self.fret_count + 1):  # 从1开始，因为不再绘制最左侧的竖线
+        for i in range(1, self.fret_count + 1):
             x = i * self.fret_spacing
             if i == 1:  # 紧邻数字1的左侧竖线不透明
                 pen = QPen(Qt.black, 2)
             else:  # 其他竖线带透明度
                 pen = QPen(QColor(0, 0, 0, 120), 2)
             painter.setPen(pen)
-            painter.drawLine(x, self.string_spacing, x, self.height() - self.string_spacing)
+            # 调整竖线的起点和终点
+            top_y = self.string_spacing  # 第一根弦的位置
+            bottom_y = self.string_spacing * self.string_count  # 第六根弦的位置
+            painter.drawLine(x, top_y, x, bottom_y)
 
     def drawStrings(self, painter):
         pen = QPen(QColor(160, 82, 45, 120), 4)  # 更淡的棕色
@@ -83,12 +97,36 @@ class Fretboard(QWidget):
 
                 painter.drawText(x, y + 5, note)
 
+    def drawFretMarkers(self, painter):
+        marker_frets = [3, 5, 7, 9, 12, 15, 17, 19]
+        marker_color = QColor(0, 0, 180, 100)  # 降低蓝色的饱和度，增加透明度
+        marker_diameter = 15  # 点点直径
+        painter.setBrush(marker_color)
+
+        center_y = (self.string_spacing + (self.string_spacing * self.string_count)) / 2
+
+        for fret in marker_frets:
+            t = fret + 1
+            x = t * self.fret_spacing - (self.fret_spacing / 2)
+
+            if fret != 12:
+                # 除了12品外的点点
+                painter.drawEllipse(x - marker_diameter / 2, center_y - marker_diameter / 2, marker_diameter, marker_diameter)
+            else:
+                # 12品的两个点点，分别与第2弦和第5弦对齐
+                string2_y = 2 * self.string_spacing
+                string5_y = 5 * self.string_spacing
+                painter.drawEllipse(x - marker_diameter / 2, string2_y - marker_diameter / 2, marker_diameter, marker_diameter)
+                painter.drawEllipse(x - marker_diameter / 2, string5_y - marker_diameter / 2, marker_diameter, marker_diameter)
+
+
     def paintEvent(self, event):
         painter = QPainter(self)
         self.drawFrets(painter)
         self.drawStrings(painter)
         self.drawFretNumbers(painter)
         self.drawNotes(painter)  # 添加绘制音名的调用
+        self.drawFretMarkers(painter)  # 添加绘制点点的调用
 
     def mousePressEvent(self, event):
         x = event.x()
@@ -113,6 +151,12 @@ class Fretboard(QWidget):
         note = notes[note_index]
         QMessageBox.information(self, "音名", f"弦：{string}, 品位：{fret}, 音名：{note}")
 
+    # def initSynth(self):
+    #     self.synth = fluidsynth.Synth()
+    #     self.synth.start()
+
+    #     sfid = self.synth.sfload("Acoustic Guitar - Vince.sf2")
+    #     self.synth.program_select(0, sfid, 0, 0)
 
 
 class GuitarApp(QMainWindow):
