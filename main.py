@@ -1,10 +1,11 @@
+import os
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget
 from PyQt5.QtGui import QPainter, QPen, QFont
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QMessageBox, QPushButton
-# import fluidsynth
+import fluidsynth
 
 class Fretboard(QWidget):
     def __init__(self, parent=None):
@@ -17,6 +18,7 @@ class Fretboard(QWidget):
                             self.string_spacing * (self.string_count + 1)) 
         # self.selectedFret = None  # 存储被选中的品位
         self.selectedFrets = []  # 存储被选中的品位
+        self.setFocusPolicy(Qt.StrongFocus)
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -24,16 +26,6 @@ class Fretboard(QWidget):
         self.drawStrings(painter)
         self.drawFretNumbers(painter)
 
-    # def drawFrets(self, painter):
-    #     for i in range(1, self.fret_count + 1):  # 从1开始，因为不再绘制最左侧的竖线
-    #         x = i * self.fret_spacing
-    #         if i == 1:  # 紧邻数字1的左侧竖线不透明
-    #             pen = QPen(Qt.black, 2)
-    #         else:  # 其他竖线带透明度
-    #             pen = QPen(QColor(0, 0, 0, 120), 2)
-    #         painter.setPen(pen)
-    #         painter.drawLine(x, self.string_spacing, x, self.height() - self.string_spacing)
-    
     def drawFrets(self, painter):
         for i in range(1, self.fret_count + 1):
             x = i * self.fret_spacing
@@ -142,7 +134,9 @@ class Fretboard(QWidget):
                 self.selectedFrets.remove(currentFret)  # 取消已选中的品位
             else:
                 self.selectedFrets.append(currentFret)  # 添加新的选中品位
+                self.playNote(fret, string)
             self.update()  # 重绘组件
+            
 
     def showNoteInfo(self, fret, string):
         open_strings = ['E', 'A', 'D', 'G', 'B', 'E']
@@ -151,33 +145,74 @@ class Fretboard(QWidget):
         note = notes[note_index]
         QMessageBox.information(self, "音名", f"弦：{string}, 品位：{fret}, 音名：{note}")
 
-    # def initSynth(self):
-    #     self.synth = fluidsynth.Synth()
-    #     self.synth.start()
+    def initSynth(self):
+        self.synth = fluidsynth.Synth()
+        self.synth.start()
 
-    #     sfid = self.synth.sfload("Acoustic Guitar - Vince.sf2")
-    #     self.synth.program_select(0, sfid, 0, 0)
+        # 检查应用是否被打包
+        if getattr(sys, 'frozen', False):
+            # 如果应用被打包，则调整文件路径
+            application_path = os.path.dirname(sys.executable)
+            sf_path = os.path.join(application_path, "resources", "Acoustic Guitar - Vince.sf2")
+        else:
+            # 如果应用未被打包，则使用原始路径
+            sf_path = "resources/Acoustic Guitar - Vince.sf2"
+
+        print('sf path:', sf_path)
+        sfid = self.synth.sfload(sf_path)
+        self.synth.program_select(0, sfid, 0, 0)
+
+    def playNote(self, fret, string):
+        note = self.getNoteNumber(string, fret)
+        self.synth.noteon(0, note, 127)  # channel 0, note, velocity 127
+        # 延时关闭音符，防止声音持续播放
+        # self.synth.noteoff(0, note)
+
+    def getNoteNumber(self, string, fret):
+        # 吉他弦的标准音符编号（从最低音弦到最高音弦）
+        standard_tuning = [64, 59, 55, 50, 45, 40]  # reverse(E2, A2, D3, G3, B3, E4)
+        return standard_tuning[string] + fret
+    
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_C:
+            self.selectedFrets = []
+            self.update()
+        elif event.key() == Qt.Key_Q:
+            for fret, string in self.selectedFrets:
+                self.playNote(fret, string)
+    
+    
 
 
 class GuitarApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.initUI()
+        self.fretboard.initSynth()
 
     def initUI(self):
         self.setWindowTitle('模拟吉他指板')
-        self.setGeometry(100, 100, 1290, 330)  # 窗口尺寸不变
+        self.setGeometry(100, 100, 1290, 330)
         self.fretboard = Fretboard(self)
         self.setCentralWidget(self.fretboard)
 
-        # 将清除按钮进一步向上移动
-        clearButton = QPushButton('Clear', self)
-        clearButton.setGeometry(10, 5, 80, 30)  # 减小按钮的 y 坐标
+        # 更新清除按钮文本
+        clearButton = QPushButton('Clear: C', self)
+        clearButton.setGeometry(10, 5, 80, 30)
         clearButton.clicked.connect(self.clearHighlights)
+
+        # 更新播放按钮文本
+        playButton = QPushButton('Play: Q', self)
+        playButton.setGeometry(100, 5, 80, 30)
+        playButton.clicked.connect(self.playSelectedNotes)
 
     def clearHighlights(self):
         self.fretboard.selectedFrets = []
         self.fretboard.update()
+
+    def playSelectedNotes(self):
+        for fret, string in self.fretboard.selectedFrets:
+            self.fretboard.playNote(fret, string)
 
 
 
