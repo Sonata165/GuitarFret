@@ -53,7 +53,7 @@ class Fretboard(QWidget):
         for i in range(1, self.fret_count):
             text = str(i)
             text_width = fm.width(text)
-            x = i * self.fret_spacing + (self.fret_spacing / 2) - (text_width / 2)
+            x = int(i * self.fret_spacing + (self.fret_spacing / 2) - (text_width / 2))
             y = self.height() - 10
             painter.drawText(x, y, text)
 
@@ -78,7 +78,7 @@ class Fretboard(QWidget):
 
                     painter.setBrush(QColor(139, 0, 0))  # 深红色填充
                     painter.setPen(Qt.NoPen)
-                    painter.drawEllipse(circle_x, circle_y, circle_diameter, circle_diameter)
+                    painter.drawEllipse(int(circle_x), int(circle_y), circle_diameter, circle_diameter)
 
                     painter.setFont(QFont('Arial', 15, QFont.Bold))
                     painter.setPen(QColor(Qt.white))
@@ -87,7 +87,7 @@ class Fretboard(QWidget):
                     painter.setFont(QFont('Arial', 15))
                     painter.setPen(QColor(128, 128, 128, 130))
 
-                painter.drawText(x, y + 5, note)
+                painter.drawText(int(x), y + 5, note)
 
     def drawFretMarkers(self, painter):
         marker_frets = [3, 5, 7, 9, 12, 15, 17, 19]
@@ -103,13 +103,13 @@ class Fretboard(QWidget):
 
             if fret != 12:
                 # 除了12品外的点点
-                painter.drawEllipse(x - marker_diameter / 2, center_y - marker_diameter / 2, marker_diameter, marker_diameter)
+                painter.drawEllipse(int(x - marker_diameter / 2), int(center_y - marker_diameter / 2), marker_diameter, marker_diameter)
             else:
                 # 12品的两个点点，分别与第2弦和第5弦对齐
                 string2_y = 2 * self.string_spacing
                 string5_y = 5 * self.string_spacing
-                painter.drawEllipse(x - marker_diameter / 2, string2_y - marker_diameter / 2, marker_diameter, marker_diameter)
-                painter.drawEllipse(x - marker_diameter / 2, string5_y - marker_diameter / 2, marker_diameter, marker_diameter)
+                painter.drawEllipse(int(x - marker_diameter / 2), int(string2_y - marker_diameter / 2), marker_diameter, marker_diameter)
+                painter.drawEllipse(int(x - marker_diameter / 2), int(string5_y - marker_diameter / 2), marker_diameter, marker_diameter)
 
 
     def paintEvent(self, event):
@@ -146,7 +146,7 @@ class Fretboard(QWidget):
         QMessageBox.information(self, "音名", f"弦：{string}, 品位：{fret}, 音名：{note}")
 
     def initSynth(self):
-        self.synth = fluidsynth.Synth()
+        self.synth = fluidsynth.Synth(samplerate=44100.0)
         self.synth.start()
 
         # 检查应用是否被打包
@@ -158,7 +158,7 @@ class Fretboard(QWidget):
             # 如果应用未被打包，则使用原始路径
             sf_path = "resources/Acoustic Guitar - Vince.sf2"
 
-        print('sf path:', sf_path)
+        print('Opening SoundFont: {}'.format(sf_path))
         sfid = self.synth.sfload(sf_path)
         self.synth.program_select(0, sfid, 0, 0)
 
