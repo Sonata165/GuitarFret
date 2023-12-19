@@ -1,6 +1,6 @@
 import os
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QLabel
 from PyQt5.QtGui import QPainter, QPen, QFont
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor
@@ -14,17 +14,18 @@ class Fretboard(QWidget):
         self.fret_count = 20    # 品格数量
         self.string_spacing = 45  # 琴弦间距，原来的1.5倍
         self.fret_spacing = 60   # 品格间距，原来的1.5倍
+        self.initial_width = self.fret_spacing * (self.fret_count + 1)
+        self.initial_height = self.string_spacing * (self.string_count + 1)
         self.setMinimumSize(self.fret_spacing * (self.fret_count + 1), 
-                            self.string_spacing * (self.string_count + 1)) 
+                            self.string_spacing * (self.string_count + 1))
         # self.selectedFret = None  # 存储被选中的品位
         self.selectedFrets = []  # 存储被选中的品位
         self.setFocusPolicy(Qt.StrongFocus)
+        self.rootNote = set()
 
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        self.drawFrets(painter)
-        self.drawStrings(painter)
-        self.drawFretNumbers(painter)
+    def resizeEvent(self, event):
+        # 重设组件的尺寸为初始尺寸，防止随窗口变化而改变
+        self.resize(self.initial_width, self.initial_height)
 
     def drawFrets(self, painter):
         for i in range(1, self.fret_count + 1):
@@ -49,12 +50,12 @@ class Fretboard(QWidget):
     def drawFretNumbers(self, painter):
         painter.setPen(Qt.black)
         painter.setFont(QFont('Arial', 15))
-        fm = painter.fontMetrics()  # 获取字体度量信息，用于计算文本宽度
+        fm = painter.fontMetrics()
         for i in range(1, self.fret_count):
             text = str(i)
             text_width = fm.width(text)
             x = int(i * self.fret_spacing + (self.fret_spacing / 2) - (text_width / 2))
-            y = self.height() - 10
+            y = self.height() - 10  # 将 y 坐标向上调整，使其更接近指板
             painter.drawText(x, y, text)
 
     def drawNotes(self, painter):
@@ -82,12 +83,24 @@ class Fretboard(QWidget):
 
                     painter.setFont(QFont('Arial', 15, QFont.Bold))
                     painter.setPen(QColor(Qt.white))
+                    painter.drawText(int(x), y + 5, note)
                 else:
                     # 正常显示逻辑
                     painter.setFont(QFont('Arial', 15))
                     painter.setPen(QColor(128, 128, 128, 130))
+                    painter.drawText(int(x), y + 5, note)
 
-                painter.drawText(int(x), y + 5, note)
+                if (fret, string) in self.rootNote:
+                    if (fret, string) not in self.selectedFrets:
+                        self.rootNote.remove((fret, string))
+                    else:
+                        # 绘制根音的黑色空心圆
+                        root_circle_diameter = 40  # 根音圆的直径
+                        root_circle_x = fret * self.fret_spacing + (self.fret_spacing / 2) - (root_circle_diameter / 2)
+                        root_circle_y = (string + 1) * self.string_spacing - (root_circle_diameter / 2)
+                        painter.setBrush(Qt.NoBrush)
+                        painter.setPen(QPen(Qt.black, 2))  # 黑色，线宽度 2
+                        painter.drawEllipse(int(root_circle_x), int(root_circle_y), root_circle_diameter, root_circle_diameter)
 
     def drawFretMarkers(self, painter):
         marker_frets = [3, 5, 7, 9, 12, 15, 17, 19]
@@ -114,11 +127,23 @@ class Fretboard(QWidget):
 
     def paintEvent(self, event):
         painter = QPainter(self)
+
         self.drawFrets(painter)
         self.drawStrings(painter)
         self.drawFretNumbers(painter)
         self.drawNotes(painter)  # 添加绘制音名的调用
         self.drawFretMarkers(painter)  # 添加绘制点点的调用
+
+        # 绘制边框
+        self.drawFretboardEdge(painter)
+
+    def drawFretboardEdge(self, painter):
+        pen = QPen(QColor(128, 128, 128, 180))  # 灰色，带有透明度
+        pen.setWidth(2)  # 设置线条宽度
+        painter.setPen(pen)
+        painter.setBrush(Qt.NoBrush)  # 设置无填充
+        # 绘制边框，留出一定边距
+        painter.drawRect(0, 0, self.width() - 1, self.height() - 1)
 
     def mousePressEvent(self, event):
         x = event.x()
@@ -130,12 +155,23 @@ class Fretboard(QWidget):
 
         if 0 <= fret <= self.fret_count and 0 <= string < self.string_count:
             currentFret = (fret, string)
-            if currentFret in self.selectedFrets:
-                self.selectedFrets.remove(currentFret)  # 取消已选中的品位
+
+            # 检查是否是鼠标右键点击
+            if event.button() == Qt.RightButton:
+                if currentFret in self.rootNote:
+                    # 如果当前fret已经是root note，则取消root highlight
+                    self.rootNote.remove(currentFret)
+                elif currentFret in self.selectedFrets:
+                    # 设置当前fret为root note
+                    self.rootNote.add(currentFret)
+                self.update()
             else:
-                self.selectedFrets.append(currentFret)  # 添加新的选中品位
-                self.playNote(fret, string)
-            self.update()  # 重绘组件
+                if currentFret in self.selectedFrets:
+                    self.selectedFrets.remove(currentFret)
+                else:
+                    self.selectedFrets.append(currentFret)
+                    self.playNote(fret, string)
+                self.update()
             
 
     def showNoteInfo(self, fret, string):
@@ -162,12 +198,6 @@ class Fretboard(QWidget):
         sfid = self.synth.sfload(sf_path)
         self.synth.program_select(0, sfid, 0, 0)
 
-    def playNote(self, fret, string):
-        note = self.getNoteNumber(string, fret)
-        self.synth.noteon(0, note, 127)  # channel 0, note, velocity 127
-        # 延时关闭音符，防止声音持续播放
-        # self.synth.noteoff(0, note)
-
     def getNoteNumber(self, string, fret):
         # 吉他弦的标准音符编号（从最低音弦到最高音弦）
         standard_tuning = [64, 59, 55, 50, 45, 40]  # reverse(E2, A2, D3, G3, B3, E4)
@@ -175,13 +205,24 @@ class Fretboard(QWidget):
     
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_C:
-            self.selectedFrets = []
-            self.update()
+            self.clearHighlights()
         elif event.key() == Qt.Key_Q:
-            for fret, string in self.selectedFrets:
-                self.playNote(fret, string)
+            self.playSelectedNotes()
     
+    def clearHighlights(self):
+        self.selectedFrets = []
+        self.rootNote.clear()
+        self.update()
+
+    def playNote(self, fret, string):
+        note = self.getNoteNumber(string, fret)
+        self.synth.noteon(0, note, 127)  # channel 0, note, velocity 127
+        # 延时关闭音符，防止声音持续播放
+        # self.synth.noteoff(0, note)
     
+    def playSelectedNotes(self):
+        for fret, string in self.selectedFrets:
+            self.playNote(fret, string)
 
 
 class GuitarApp(QMainWindow):
@@ -190,31 +231,125 @@ class GuitarApp(QMainWindow):
         self.initUI()
         self.fretboard.initSynth()
 
+    # def initUI(self):
+    #     window_width = 1200
+    #     window_height = 360
+
+    #     fretboard_x = 0     # Fretboard左上角到窗口左边界的水平距离
+    #     fretboard_y = 70    # Fretboard左上角到窗口顶部的垂直距离
+    #     fretboard_width = window_width
+    #     fretboard_height = 340
+
+    #     button_x = 10
+    #     button_y = window_height - 40
+    #     button_width = 80
+    #     button_height = 30
+
+    #     instructions_x = 200
+    #     instructions_y = window_height - 40
+    #     instructions_width = 400
+    #     instructions_height = 20
+
+    #     total_components = 3  # 组件总数（两个按钮和一个说明文本）
+    #     component_width = 80  # 所有组件的统一宽度
+    #     component_height = 30  # 所有组件的统一高度
+    #     gap_between_components = 10  # 组件之间的间隔
+
+    #     # 计算所有组件和间隔所需的总宽度
+    #     total_width_needed = (total_components * component_width) + ((total_components - 1) * gap_between_components)
+
+    #     # 计算第一个组件的起始x坐标
+    #     start_x = (window_width - total_width_needed) / 2
+
+    #     # 设置窗口标题和尺寸
+    #     self.setWindowTitle('模拟吉他指板')
+    #     self.setGeometry(0, 0, window_width, window_height)
+    #     self.centerWindow()
+
+    #     # 设置指板
+    #     self.fretboard = Fretboard(self)
+    #     self.fretboard.setGeometry(fretboard_x, fretboard_y, fretboard_width, fretboard_height)
+    #     self.setCentralWidget(self.fretboard)
+
+    #     # 添加说明文本
+    #     instructions = QLabel('Select note: left click; Highlight root: right click.', self)
+    #     # instructions.setGeometry(instructions_x, instructions_y, instructions_width, instructions_height)
+    #     instructions.setGeometry(start_x + 2 * component_width + 2 * gap_between_components, window_height - 40, 400, 20)
+
+    #     # 清除按钮
+    #     clearButton = QPushButton('Clear: C', self)
+    #     # clearButton.setGeometry(button_x, button_y, button_width, button_height)
+    #     clearButton.setGeometry(start_x, window_height - 40, component_width, component_height)
+    #     clearButton.clicked.connect(self.clearHighlights)
+
+    #     # 播放按钮
+    #     playButton = QPushButton('Play: Q', self)
+    #     # playButton.setGeometry(button_x + 100, button_y, button_width, button_height)
+    #     playButton.setGeometry(start_x + component_width + gap_between_components, window_height - 40, component_width, component_height)
+    #     playButton.clicked.connect(self.playSelectedNotes)
+
     def initUI(self):
+        window_width = 1260   # Original set to 1200, but will be resized to 1260
+        window_height = 360
+
+        # 设置窗口标题和尺寸
         self.setWindowTitle('模拟吉他指板')
-        self.setGeometry(100, 100, 1290, 330)
+        self.setGeometry(0, 0, window_width, window_height)
+        self.centerWindow()
+
+        # 设置指板
         self.fretboard = Fretboard(self)
+        fretboard_x = 0
+        fretboard_y = 70
+        fretboard_width = window_width
+        fretboard_height = self.fretboard.height()
+        print(self.fretboard.width(), self.fretboard.height())
+        self.fretboard.setGeometry(fretboard_x, fretboard_y, fretboard_width, fretboard_height)
         self.setCentralWidget(self.fretboard)
 
-        # 更新清除按钮文本
+        # 按钮和说明文本的配置
+        button_width = 80
+        button_height = 30
+        instructions_width = 400
+        instructions_height = 20
+        component_gap = 10  # 组件间隔
+
+        # 总宽度
+        total_width = 2 * button_width + instructions_width + 2 * component_gap
+        start_x = (window_width - total_width) / 2
+        vertical_center_y = fretboard_height + button_height//2 + 5      # 垂直位置
+
+        # 清除按钮
+        clearButton_x = start_x
         clearButton = QPushButton('Clear: C', self)
-        clearButton.setGeometry(10, 5, 80, 30)
+        clearButton.setGeometry(clearButton_x, vertical_center_y - button_height / 2, button_width, button_height)
         clearButton.clicked.connect(self.clearHighlights)
 
-        # 更新播放按钮文本
+        # 播放按钮
+        playButton_x = clearButton_x + button_width + component_gap
         playButton = QPushButton('Play: Q', self)
-        playButton.setGeometry(100, 5, 80, 30)
+        playButton.setGeometry(playButton_x, vertical_center_y - button_height / 2, button_width, button_height)
         playButton.clicked.connect(self.playSelectedNotes)
 
+        # 说明文本
+        instructions_x = playButton_x + button_width + component_gap
+        instructions = QLabel('Select note: left click; Highlight root: right click.', self)
+        instructions.setGeometry(instructions_x, vertical_center_y - instructions_height / 2, instructions_width, instructions_height)
+
+
+    def centerWindow(self):
+        # 将窗口移动到屏幕中心
+        qr = self.frameGeometry()
+        cp = QApplication.desktop().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
+
     def clearHighlights(self):
-        self.fretboard.selectedFrets = []
-        self.fretboard.update()
+        self.fretboard.clearHighlights()
 
     def playSelectedNotes(self):
         for fret, string in self.fretboard.selectedFrets:
             self.fretboard.playNote(fret, string)
-
-
 
 
 
