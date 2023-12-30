@@ -5,4 +5,4 @@ pyinstaller main.py \
             --noconsole \
             --icon guitar.icns \
             --name GuitarFret \
-            --add-data "resources/Acoustic Guitar - Vince.sf2:resources" 
+            --add-data "resources/Tyros Nylon.sf2:resources" 
