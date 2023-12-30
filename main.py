@@ -90,6 +90,7 @@ class Fretboard(QWidget):
                     painter.setPen(QColor(128, 128, 128, 130))
                     painter.drawText(int(x), y + 5, note)
 
+                # For root note, highlight
                 if (fret, string) in self.rootNote:
                     if (fret, string) not in self.selectedFrets:
                         self.rootNote.remove((fret, string))
@@ -104,8 +105,11 @@ class Fretboard(QWidget):
 
     def drawFretMarkers(self, painter):
         marker_frets = [3, 5, 7, 9, 12, 15, 17, 19]
-        marker_color = QColor(0, 0, 180, 100)  # 降低蓝色的饱和度，增加透明度
+        marker_color = QColor(0, 0, 180, 50)  # 降低蓝色的饱和度，增加透明度
         marker_diameter = 15  # 点点直径
+        # painter.setPen(QPen(Qt.black, 2))  # 黑色，线宽度 2
+        # painter.setPen(QColor(128, 128, 128, 130)) # 灰色
+        painter.setPen(Qt.NoPen)
         painter.setBrush(marker_color)
 
         center_y = (self.string_spacing + (self.string_spacing * self.string_count)) / 2
@@ -129,10 +133,11 @@ class Fretboard(QWidget):
         painter = QPainter(self)
 
         self.drawFrets(painter)
+        self.drawFretMarkers(painter)  # 添加绘制点点的调用
         self.drawStrings(painter)
         self.drawFretNumbers(painter)
         self.drawNotes(painter)  # 添加绘制音名的调用
-        self.drawFretMarkers(painter)  # 添加绘制点点的调用
+        
 
         # 绘制边框
         self.drawFretboardEdge(painter)
@@ -230,63 +235,6 @@ class GuitarApp(QMainWindow):
         super().__init__()
         self.initUI()
         self.fretboard.initSynth()
-
-    # def initUI(self):
-    #     window_width = 1200
-    #     window_height = 360
-
-    #     fretboard_x = 0     # Fretboard左上角到窗口左边界的水平距离
-    #     fretboard_y = 70    # Fretboard左上角到窗口顶部的垂直距离
-    #     fretboard_width = window_width
-    #     fretboard_height = 340
-
-    #     button_x = 10
-    #     button_y = window_height - 40
-    #     button_width = 80
-    #     button_height = 30
-
-    #     instructions_x = 200
-    #     instructions_y = window_height - 40
-    #     instructions_width = 400
-    #     instructions_height = 20
-
-    #     total_components = 3  # 组件总数（两个按钮和一个说明文本）
-    #     component_width = 80  # 所有组件的统一宽度
-    #     component_height = 30  # 所有组件的统一高度
-    #     gap_between_components = 10  # 组件之间的间隔
-
-    #     # 计算所有组件和间隔所需的总宽度
-    #     total_width_needed = (total_components * component_width) + ((total_components - 1) * gap_between_components)
-
-    #     # 计算第一个组件的起始x坐标
-    #     start_x = (window_width - total_width_needed) / 2
-
-    #     # 设置窗口标题和尺寸
-    #     self.setWindowTitle('模拟吉他指板')
-    #     self.setGeometry(0, 0, window_width, window_height)
-    #     self.centerWindow()
-
-    #     # 设置指板
-    #     self.fretboard = Fretboard(self)
-    #     self.fretboard.setGeometry(fretboard_x, fretboard_y, fretboard_width, fretboard_height)
-    #     self.setCentralWidget(self.fretboard)
-
-    #     # 添加说明文本
-    #     instructions = QLabel('Select note: left click; Highlight root: right click.', self)
-    #     # instructions.setGeometry(instructions_x, instructions_y, instructions_width, instructions_height)
-    #     instructions.setGeometry(start_x + 2 * component_width + 2 * gap_between_components, window_height - 40, 400, 20)
-
-    #     # 清除按钮
-    #     clearButton = QPushButton('Clear: C', self)
-    #     # clearButton.setGeometry(button_x, button_y, button_width, button_height)
-    #     clearButton.setGeometry(start_x, window_height - 40, component_width, component_height)
-    #     clearButton.clicked.connect(self.clearHighlights)
-
-    #     # 播放按钮
-    #     playButton = QPushButton('Play: Q', self)
-    #     # playButton.setGeometry(button_x + 100, button_y, button_width, button_height)
-    #     playButton.setGeometry(start_x + component_width + gap_between_components, window_height - 40, component_width, component_height)
-    #     playButton.clicked.connect(self.playSelectedNotes)
 
     def initUI(self):
         window_width = 1260   # Original set to 1200, but will be resized to 1260
