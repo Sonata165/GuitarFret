@@ -1,5 +1,5 @@
 # GuitarFret
- Fretboard simulator for guitar
+ Fretboard simulator that facilitate guitar arrangement.
 
 Use: open dist/GuitarFret.app
 or, python main.py
