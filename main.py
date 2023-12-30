@@ -194,10 +194,10 @@ class Fretboard(QWidget):
         if getattr(sys, 'frozen', False):
             # 如果应用被打包，则调整文件路径
             application_path = os.path.dirname(sys.executable)
-            sf_path = os.path.join(application_path, "resources", "Acoustic Guitar - Vince.sf2")
+            sf_path = os.path.join(application_path, "resources", "Tyros Nylon.sf2")
         else:
             # 如果应用未被打包，则使用原始路径
-            sf_path = "resources/Acoustic Guitar - Vince.sf2"
+            sf_path = "resources/Tyros Nylon.sf2"
 
         print('Opening SoundFont: {}'.format(sf_path))
         sfid = self.synth.sfload(sf_path)
