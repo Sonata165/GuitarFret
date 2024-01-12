@@ -6,6 +6,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QMessageBox, QPushButton
 import fluidsynth
+import subprocess
 
 class Fretboard(QWidget):
     def __init__(self, parent=None):
@@ -18,7 +19,6 @@ class Fretboard(QWidget):
         self.initial_height = self.string_spacing * (self.string_count + 1)
         self.setMinimumSize(self.fret_spacing * (self.fret_count + 1), 
                             self.string_spacing * (self.string_count + 1))
-        # self.selectedFret = None  # 存储被选中的品位
         self.selectedFrets = []  # 存储被选中的品位
         self.setFocusPolicy(Qt.StrongFocus)
         self.rootNote = set()
@@ -187,8 +187,11 @@ class Fretboard(QWidget):
         QMessageBox.information(self, "音名", f"弦：{string}, 品位：{fret}, 音名：{note}")
 
     def initSynth(self):
-        self.synth = fluidsynth.Synth(samplerate=44100.0)
+        self.synth = fluidsynth.Synth(samplerate=44100.0, gain=1.0)
         self.synth.start()
+        # self.synth.setting('synth.gain', 10)
+        # subprocess.run(['fluidsynth', '-ni', '-g', '5', 'path to soundfont', 'myfile.mid', '-F', 'myfile.wav'])
+
 
         # 检查应用是否被打包
         if getattr(sys, 'frozen', False):
@@ -241,7 +244,7 @@ class GuitarApp(QMainWindow):
         window_height = 360
 
         # 设置窗口标题和尺寸
-        self.setWindowTitle('模拟吉他指板')
+        self.setWindowTitle('GuitarFret')
         self.setGeometry(0, 0, window_width, window_height)
         self.centerWindow()
 

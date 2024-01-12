@@ -7,6 +7,10 @@ or, python main.py
 ![App demonstration](demo.png)
 
 ## Update Log
+[2024-01-12] 
+- Fixed the volume too low issue.
+
+
 [2023-12-30]
 - Fixed note name display issue at the 12-th fret.
 
