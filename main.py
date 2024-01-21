@@ -189,9 +189,6 @@ class Fretboard(QWidget):
     def initSynth(self):
         self.synth = fluidsynth.Synth(samplerate=44100.0, gain=1.0)
         self.synth.start()
-        # self.synth.setting('synth.gain', 10)
-        # subprocess.run(['fluidsynth', '-ni', '-g', '5', 'path to soundfont', 'myfile.mid', '-F', 'myfile.wav'])
-
 
         # 检查应用是否被打包
         if getattr(sys, 'frozen', False):
