@@ -2,7 +2,7 @@ import os
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QLabel
 from PyQt5.QtGui import QPainter, QPen, QFont
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import QMessageBox, QPushButton
 import fluidsynth
@@ -222,8 +222,10 @@ class Fretboard(QWidget):
     def playNote(self, fret, string):
         note = self.getNoteNumber(string, fret)
         self.synth.noteon(0, note, 127)  # channel 0, note, velocity 127
+        
         # 延时关闭音符，防止声音持续播放
-        # self.synth.noteoff(0, note)
+        duration=1000
+        QTimer.singleShot(duration, lambda: self.synth.noteoff(0, note))
     
     def playSelectedNotes(self):
         for fret, string in self.selectedFrets:
