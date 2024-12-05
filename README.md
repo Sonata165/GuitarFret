@@ -8,6 +8,10 @@ or, python main.py
 
 ## Update Log
 [2024-01-12] 
+- Fixed infinite note duration on high position issue.
+
+
+[2024-01-12] 
 - Fixed the volume too low issue.
 
 
